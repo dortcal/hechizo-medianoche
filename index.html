@@ -132,8 +132,12 @@ function placeControls(force) {
   const key = playing + '|' + portrait;
   if (!force && key === ctlKey) return; ctlKey = key;
   ctl.hidden = portrait;
-  const narrow = (viewW - W * scale) / 2 < 120;
-  if (!narrow) { ctl.style.top = ''; ctl.style.right = ''; return; }
+  ctl.style.top = ''; ctl.style.right = '';
+  if (portrait) return;
+  const r = ctl.getBoundingClientRect();
+  const hudRight = offX + 1580 * scale, hudBottom = offY + (playing ? 140 : 60) * scale;
+  const narrow = r.left < hudRight && r.top < hudBottom;
+  if (!narrow) return;
   ctl.style.top = Math.round(offY + (playing ? 150 : 10) * scale) + 'px';
   ctl.style.right = Math.round(viewW - offX - 1576 * scale) + 'px';
 }
