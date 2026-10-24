@@ -959,7 +959,9 @@ function input(a) {
   if (a === 'mute') { AudioEng.setMuted(!AudioEng.muted); return; }
   if (a === 'pause') { if (G.state === 'play' && G.phase !== 'countdown') G.paused = !G.paused; return; }
   switch (G.state) {
-    case 'title': if (a === 'fire') { Sfx.select(); go('subject'); } break;
+    case 'title':
+      if (iosHelp.open) { if (a === 'fire' || a === 'back') closeIosHelp(false); break; }
+      if (a === 'fire') { Sfx.select(); go('subject'); } break;
     case 'subject': case 'diff': case 'team': menuInput(a); break;
     case 'howto': if (a === 'fire') { Sfx.select(); startGame(); } else if (a === 'back') go('team'); break;
     case 'play':
@@ -1020,6 +1022,15 @@ cv.addEventListener('pointerdown', e => {
   const p = toLogical(e);
   AudioEng.init(); if (!Music.on) Music.start(Music.mode);
   if (isPortrait()) return;
+  if (G.state === 'title' && iosHelp.open) {
+    const b = IOS_BTNS.find(b => p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h);
+    if (b) closeIosHelp(b.id === 'never');
+    return;
+  }
+  if (G.state === 'title' && IOS_HELP_ON) {
+    const c = IOS_CHIP;
+    if (p.x >= c.x && p.x <= c.x + c.w && p.y >= c.y && p.y <= c.y + c.h) { iosHelp.open = true; iosHelp.t = 0; Sfx.blip(); return; }
+  }
   if (G.paused) {
     const b = PAUSE_BTNS.find(b => p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h);
     if (b) input(b.id === 'resume' ? 'fire' : 'left');
@@ -1266,13 +1277,86 @@ function drawTitle(t) {
   const best = G.records[0];
   if (best) txt(`Récord de la noche: ${best.score} puntos · Equipo ${best.team}`, 800, 856, { size: 24, color: C.mist });
   txt('Diseñado por David OZC', 1570, 872, { size: 22, color: C.mist, align: 'right', weight: 600, alpha: 0.85 });
-  if (IS_IOS && !FS_OK && !IS_STANDALONE) {
-    panel(380, 20, 840, 58, 29, 'rgba(255,138,31,.95)');
-    txt('Pantalla completa: Compartir  →  Añadir a pantalla de inicio', 800, 50, { size: 26, color: C.ink, maxW: 800 });
+  if (IOS_HELP_ON) {
+    if (!iosHelp.open) {
+      const c = IOS_CHIP; panel(c.x, c.y, c.w, c.h, 29, 'rgba(255,138,31,.95)');
+      txt('Cómo jugar a pantalla completa', 800, c.y + c.h / 2, { size: 26, color: C.ink, maxW: c.w - 40 });
+    }
   } else if (!IS_TOUCH && !document.hasFocus()) {
     panel(470, 20, 660, 58, 29, 'rgba(255,138,31,.95)');
     txt('Haz clic en el juego para que escuche el teclado', 800, 50, { size: 26, color: C.ink });
   }
+}
+/* ---------- invitación a instalar en iPhone / iPad ---------- */
+const IOS_CHIP = { x: 470, y: 20, w: 660, h: 58 };
+const IOS_BTNS = [
+  { id: 'ok', label: 'Entendido', x: 520, y: 690, w: 270, h: 84 },
+  { id: 'never', label: 'No volver a mostrar', x: 810, y: 690, w: 270, h: 84 }
+];
+let IOS_HELP_ON = false;
+const iosHelp = { open: false, t: 0 };
+function initIosHelp() {
+  IOS_HELP_ON = IS_IOS && !IS_STANDALONE;
+  iosHelp.open = IOS_HELP_ON && !store.get('hechizo-ios-help-off', false);
+}
+function closeIosHelp(never) {
+  iosHelp.open = false; Sfx.select();
+  if (never) store.set('hechizo-ios-help-off', true);
+}
+function iconShare(x, y, s) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+  ctx.strokeStyle = '#4da3ff'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.beginPath(); ctx.moveTo(-10, -6); ctx.lineTo(-18, -6); ctx.lineTo(-18, 22); ctx.lineTo(18, 22); ctx.lineTo(18, -6); ctx.lineTo(10, -6); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, 8); ctx.lineTo(0, -24); ctx.moveTo(-9, -15); ctx.lineTo(0, -24); ctx.lineTo(9, -15); ctx.stroke();
+  ctx.restore();
+}
+function iconAdd(x, y, s) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+  ctx.strokeStyle = C.bone; ctx.lineWidth = 4; ctx.lineCap = 'round';
+  rr(-20, -20, 40, 40, 9); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(0, 10); ctx.moveTo(-10, 0); ctx.lineTo(10, 0); ctx.stroke();
+  ctx.restore();
+}
+function iconApp(x, y, s, t) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+  rr(-30, -30, 60, 60, 14); const g = ctx.createLinearGradient(0, -30, 0, 30); g.addColorStop(0, '#3b2770'); g.addColorStop(1, '#0b0716');
+  ctx.fillStyle = g; ctx.fill(); ctx.restore();
+  drawPumpkin(x, y + 3 * s, 0.32 * s, t, { still: true });
+}
+function drawIosHelp(t) {
+  iosHelp.t += 1 / 60;
+  const k = easeOutBack(Math.min(1, iosHelp.t / 0.45));
+  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = 'rgba(8,4,18,.82)'; ctx.fillRect(0, 0, cv.width, cv.height); ctx.restore();
+  ctx.save(); ctx.translate(800, 450); ctx.scale(k, k); ctx.translate(-800, -450);
+  ctx.save(); ctx.shadowColor = 'rgba(255,138,31,.5)'; ctx.shadowBlur = 50;
+  rr(330, 70, 940, 740, 40); ctx.fillStyle = 'rgba(30,15,52,.98)'; ctx.fill(); ctx.restore();
+  rr(330, 70, 940, 740, 40); ctx.lineWidth = 4; ctx.strokeStyle = C.pumpkin; ctx.stroke();
+  const dev = /iPad/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ? 'iPad' : 'iPhone';
+  txt('Juega a pantalla completa', 800, 140, { size: 66, font: 'display', color: C.pumpkin, glow: '#ff5a00' });
+  txt(`Instala el juego en tu ${dev} y se abrirá sin las barras de Safari`, 800, 205, { size: 30, color: C.mist, maxW: 860 });
+  const steps = [
+    ['Toca el botón Compartir', dev === 'iPhone' ? 'Si no lo ves, está dentro del menú «···»' : 'Está junto a la barra de direcciones', (x, y) => iconShare(x, y, 1.4)],
+    ['Elige «Añadir a pantalla de inicio»', 'Si no aparece, desliza el menú hacia abajo', (x, y) => iconAdd(x, y, 1.4)],
+    ['Pulsa «Añadir» y abre el juego desde su icono', 'Busca la calabaza «Hechizo» en tu pantalla de inicio', (x, y) => iconApp(x, y, 1.15, t)]
+  ];
+  steps.forEach(([a, b, icon], i) => {
+    const y = 300 + i * 126;
+    ctx.save(); ctx.fillStyle = C.pumpkin; ctx.beginPath(); ctx.arc(400, y, 28, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    txt(String(i + 1), 400, y + 2, { size: 34, color: C.ink });
+    ctx.save(); rr(450, y - 46, 92, 92, 22); ctx.fillStyle = 'rgba(255,255,255,.07)'; ctx.fill(); ctx.restore();
+    icon(496, y);
+    txt(a, 572, y - 20, { size: 38, color: C.bone, align: 'left', maxW: 670 });
+    txt(b, 572, y + 24, { size: 28, color: C.mist, align: 'left', weight: 600, maxW: 670 });
+  });
+  for (const bt of IOS_BTNS) {
+    const main = bt.id === 'ok';
+    ctx.save(); rr(bt.x, bt.y, bt.w, bt.h, 24);
+    ctx.fillStyle = main ? C.potion : 'rgba(255,255,255,.06)'; ctx.fill();
+    if (!main) { ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(185,168,214,.6)'; ctx.stroke(); }
+    ctx.restore();
+    txt(bt.label, bt.x + bt.w / 2, bt.y + bt.h / 2 + 2, { size: main ? 34 : 26, color: main ? C.ink : C.mist, maxW: bt.w - 24 });
+  }
+  ctx.restore();
 }
 function drawCards(t, items, title, sub, renderCard) {
   txt(title, 800, 110, { size: 88, font: 'display', color: C.pumpkin, glow: '#ff5a00', stroke: '#1a0b2a', sw: 10 });
@@ -1437,12 +1521,14 @@ function frame(now) {
   drawEffects();
   if (flash > 0) { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = `rgba(${flashColor},${Math.min(0.85, flash) * (reduceMotion ? 0.3 : 1)})`; ctx.fillRect(0, 0, cv.width, cv.height); ctx.restore(); }
   if (G.paused) drawPause(t);
+  if (G.state === 'title' && iosHelp.open) drawIosHelp(t); else iosHelp.t = 0;
   if (isPortrait()) drawRotate(t);
   ctx.restore();
   requestAnimationFrame(frame);
 }
 
 function start() {
+  initIosHelp();
   resize(); buildLayers();
   AudioEng.setMuted(AudioEng.muted);
   window.__hechizo = { G, input };
