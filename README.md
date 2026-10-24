@@ -23,6 +23,13 @@ Retos: tablas de multiplicar, sumas y restas, patrones y secuencias, ortografía
 
 **Antes de jugar:** haz clic una vez dentro del juego para que reciba las teclas de la Makey Makey.
 
+## En móviles y tabletas
+
+- El juego ocupa toda la pantalla y se juega en horizontal. Si el dispositivo está en vertical, pide girarlo.
+- En Android y en iPad entra en pantalla completa al primer toque.
+- En iPhone, Safari no permite la pantalla completa en páginas web: usa **Compartir → Añadir a pantalla de inicio** y ábrelo desde el icono para jugar sin barras del navegador.
+- El botón de pausa (arriba a la derecha) permite seguir o salir al menú tocando la pantalla.
+
 ---
 
 Diseñado por David OZC.

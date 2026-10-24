@@ -14,8 +14,15 @@
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0b0716">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Hechizo">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icono-180.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M30 14q-2-8 6-10l2 3q-5 2-4 7z' fill='%235a3b18'/%3E%3Cellipse cx='20' cy='38' rx='14' ry='20' fill='%23e57a14'/%3E%3Cellipse cx='44' cy='38' rx='14' ry='20' fill='%23e57a14'/%3E%3Cellipse cx='32' cy='38' rx='16' ry='22' fill='%23ff962e'/%3E%3Cpath d='M20 32h8l-4-8zM36 32h8l-4-8zM18 42q14 14 28 0q-14 6-28 0z' fill='%23ffe066'/%3E%3C/svg%3E">
-<style>*,*::before,*::after{box-sizing:border-box}html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}</style>
+<style>*,*::before,*::after{box-sizing:border-box}body{margin:0}[hidden]{display:none!important}</style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Creepster&display=swap">
@@ -38,18 +45,18 @@ body {
   color: var(--bone);
   font-family: var(--body);
   overflow: hidden;
-  padding-left: max(16px, env(safe-area-inset-left, 0px));
-  padding-right: max(16px, env(safe-area-inset-right, 0px));
-  padding-block: 0;
-  box-sizing: border-box;
+  overscroll-behavior: none;
+  -webkit-user-select: none; user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
 }
-#stage { position: relative; width: 100%; height: 100%; }
+#stage { position: fixed; inset: 0; background: var(--night); }
 #c { display: block; width: 100%; height: 100%; touch-action: none; cursor: pointer; }
 #stage:fullscreen { background: var(--night); }
 .controls {
   position: absolute;
   top: calc(8px + env(safe-area-inset-top, 0px));
-  right: 8px;
+  right: calc(8px + env(safe-area-inset-right, 0px));
   display: flex;
   gap: 8px;
 }
@@ -73,6 +80,9 @@ body {
 <div id="stage">
   <canvas id="c" aria-label="Juego Hechizo a Medianoche. Se juega con las flechas y la barra espaciadora o con una Makey Makey."></canvas>
   <div class="controls">
+    <button id="btnPause" type="button" aria-label="Pausa" title="Pausa (Esc)">
+      <svg viewBox="0 0 24 24"><path d="M9 6v12M15 6v12"/></svg>
+    </button>
     <button id="btnMute" type="button" aria-label="Silenciar" title="Silenciar (M)">
       <svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path id="waves" d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>
     </button>
@@ -99,16 +109,37 @@ const C = {
 let scale = 1, offX = 0, offY = 0, dpr = 1;
 const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+let cScale = 1, cOffX = 0, cOffY = 0, viewW = W, viewH = H;
 function resize() {
   const r = cv.getBoundingClientRect();
+  viewW = r.width; viewH = r.height;
   dpr = Math.min(2, window.devicePixelRatio || 1);
   cv.width = Math.max(1, Math.round(r.width * dpr));
   cv.height = Math.max(1, Math.round(r.height * dpr));
   scale = Math.min(r.width / W, r.height / H);
   offX = (r.width - W * scale) / 2;
   offY = (r.height - H * scale) / 2;
+  cScale = Math.max(r.width / W, r.height / H);
+  cOffX = (r.width - W * cScale) / 2;
+  cOffY = (r.height - H * cScale) * 0.7;
+  placeControls(true);
+}
+let ctlKey = '';
+function placeControls(force) {
+  const ctl = document.querySelector('.controls'); if (!ctl) return;
+  const playing = typeof G !== 'undefined' && G.state === 'play';
+  const portrait = typeof isPortrait === 'function' && isPortrait();
+  const key = playing + '|' + portrait;
+  if (!force && key === ctlKey) return; ctlKey = key;
+  ctl.hidden = portrait;
+  const narrow = (viewW - W * scale) / 2 < 120;
+  if (!narrow) { ctl.style.top = ''; ctl.style.right = ''; return; }
+  ctl.style.top = Math.round(offY + (playing ? 150 : 10) * scale) + 'px';
+  ctl.style.right = Math.round(viewW - offX - 1576 * scale) + 'px';
 }
 window.addEventListener('resize', resize);
+window.addEventListener('orientationchange', () => setTimeout(resize, 250));
+if (window.visualViewport) window.visualViewport.addEventListener('resize', resize);
 
 const rand = (a, b) => a + Math.random() * (b - a);
 const randi = (a, b) => Math.floor(rand(a, b + 1));
@@ -522,6 +553,9 @@ function buildLayers() {
   fg.save(); fg.scale(1, 0.4); fg.fillStyle = fr; fg.beginPath(); fg.arc(210, 200, 200, 0, Math.PI * 2); fg.fill(); fg.restore();
 }
 
+let shX = 0, shY = 0;
+function setCoverTransform() { ctx.setTransform(cScale * dpr, 0, 0, cScale * dpr, cOffX * dpr, cOffY * dpr); }
+function setGameTransform() { ctx.setTransform(scale * dpr, 0, 0, scale * dpr, (offX + shX * scale) * dpr, (offY + shY * scale) * dpr); }
 function drawBackground(t, dt) {
   ctx.drawImage(skyLayer, 0, 0, W, H);
   for (const s of STARS) { const a = 0.35 + 0.65 * Math.abs(Math.sin(t * s.sp * 0.6 + s.p)); ctx.fillStyle = `rgba(255,247,214,${a})`; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill(); }
@@ -544,7 +578,7 @@ function drawBackground(t, dt) {
     ctx.save(); ctx.globalAlpha = 0.85; drawBat(b.x, b.y, 0.22, t * 1.4 + b.p); ctx.restore();
     if (b.x < -200 || b.x > W + 200) bgBats.splice(i, 1);
   }
-  if (G.boss.active || G.boss.dying > 0) drawBoss(t);
+  if (G.boss.active || G.boss.dying > 0) { setGameTransform(); drawBoss(t); setCoverTransform(); }
   ctx.drawImage(landLayer, 0, 0, W, H);
   for (let i = 0; i < WINDOWS.length; i++) {
     const [x, y, w, h] = WINDOWS[i];
@@ -954,10 +988,39 @@ window.addEventListener('keydown', e => {
   e.preventDefault(); if (e.repeat) return;
   input(a);
 });
+const IS_TOUCH = (window.matchMedia && matchMedia('(pointer: coarse)').matches) || navigator.maxTouchPoints > 1;
+const IS_STANDALONE = (window.matchMedia && matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches) || navigator.standalone === true;
+const FS_OK = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+const IS_IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+function isPortrait() { return IS_TOUCH && viewH > viewW * 1.05; }
+function isFullscreen() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+function enterFullscreen() {
+  const el = document.documentElement;
+  try {
+    const req = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (!req) return;
+    const p = req.call(el, { navigationUI: 'hide' });
+    const lock = () => { try { if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {}); } catch (e) { /* sin bloqueo */ } };
+    if (p && p.then) p.then(lock).catch(() => {}); else lock();
+  } catch (e) { /* pantalla completa no disponible */ }
+}
+function exitFullscreen() { try { (document.exitFullscreen || document.webkitExitFullscreen).call(document); } catch (e) { /* nada */ } }
+let autoFsDone = false;
+function maybeAutoFullscreen() {
+  if (autoFsDone || !IS_TOUCH || IS_STANDALONE || !FS_OK || isFullscreen()) return;
+  autoFsDone = true; enterFullscreen();
+}
 function toLogical(e) { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left - offX) / scale, y: (e.clientY - r.top - offY) / scale }; }
 cv.addEventListener('pointerdown', e => {
+  maybeAutoFullscreen();
   const p = toLogical(e);
   AudioEng.init(); if (!Music.on) Music.start(Music.mode);
+  if (isPortrait()) return;
+  if (G.paused) {
+    const b = PAUSE_BTNS.find(b => p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h);
+    if (b) input(b.id === 'resume' ? 'fire' : 'left');
+    return;
+  }
   if (G.state === 'subject' || G.state === 'diff' || G.state === 'team') {
     const hit = (G.cards || []).findIndex(c => p.x >= c.x && p.x <= c.x + c.w && p.y >= c.y && p.y <= c.y + c.h);
     if (hit >= 0) { G.menu[G.state] = hit; }
@@ -974,13 +1037,15 @@ cv.addEventListener('pointerdown', e => {
 });
 document.getElementById('btnMute').addEventListener('click', e => { e.currentTarget.blur(); AudioEng.init(); AudioEng.setMuted(!AudioEng.muted); });
 document.getElementById('btnFull').addEventListener('click', e => {
-  e.currentTarget.blur();
-  const st = document.getElementById('stage');
-  try {
-    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
-    else if (st.requestFullscreen) st.requestFullscreen().catch(() => {});
-  } catch (err) { /* pantalla completa no disponible */ }
+  e.currentTarget.blur(); autoFsDone = true;
+  if (isFullscreen()) exitFullscreen(); else enterFullscreen();
 });
+if (!FS_OK || IS_STANDALONE) document.getElementById('btnFull').hidden = true;
+document.getElementById('btnPause').addEventListener('click', e => {
+  e.currentTarget.blur(); AudioEng.init();
+  if (G.state === 'play' && G.phase !== 'countdown') G.paused = !G.paused;
+});
+window.addEventListener('keydown', () => { autoFsDone = true; }, { once: true });
 window.addEventListener('blur', () => { if (G.state === 'play' && G.phase !== 'countdown' && G.phase !== 'victory') G.paused = true; });
 
 /* ================================================================ actualización */
@@ -1197,7 +1262,10 @@ function drawTitle(t) {
   const best = G.records[0];
   if (best) txt(`Récord de la noche: ${best.score} puntos · Equipo ${best.team}`, 800, 856, { size: 24, color: C.mist });
   txt('Diseñado por David OZC', 1570, 872, { size: 22, color: C.mist, align: 'right', weight: 600, alpha: 0.85 });
-  if (!document.hasFocus()) {
+  if (IS_IOS && !FS_OK && !IS_STANDALONE) {
+    panel(380, 20, 840, 58, 29, 'rgba(255,138,31,.95)');
+    txt('Pantalla completa: Compartir  →  Añadir a pantalla de inicio', 800, 50, { size: 26, color: C.ink, maxW: 800 });
+  } else if (!IS_TOUCH && !document.hasFocus()) {
     panel(470, 20, 660, 58, 29, 'rgba(255,138,31,.95)');
     txt('Haz clic en el juego para que escuche el teclado', 800, 50, { size: 26, color: C.ink });
   }
@@ -1312,11 +1380,29 @@ function drawResult(t) {
   });
   if (G.st > 1.5) footer('ESPACIO  otro equipo, mismo reto     ·     ←  cambiar de reto');
 }
-function drawPause() {
-  ctx.save(); ctx.fillStyle = 'rgba(8,4,18,.72)'; ctx.fillRect(0, 0, W, H); ctx.restore();
-  txt('Pausa', 800, 360, { size: 140, font: 'display', color: C.pumpkin, glow: '#ff5a00' });
-  txt('ESPACIO para seguir  ·  ← para salir al menú', 800, 480, { size: 36, color: C.bone });
-  if (!document.hasFocus()) txt('Haz clic en el juego para que vuelva a escuchar las teclas', 800, 540, { size: 28, color: C.mist });
+const PAUSE_BTNS = [{ id: 'resume', label: 'Seguir', key: 'ESPACIO', x: 470, y: 470, w: 300, h: 110 }, { id: 'menu', label: 'Salir al menú', key: '←', x: 830, y: 470, w: 300, h: 110 }];
+function drawPause(t) {
+  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = 'rgba(8,4,18,.9)'; ctx.fillRect(0, 0, cv.width, cv.height); ctx.restore();
+  txt('Pausa', 800, 330, { size: 150, font: 'display', color: C.pumpkin, glow: '#ff5a00' });
+  for (const b of PAUSE_BTNS) {
+    ctx.save(); rr(b.x, b.y, b.w, b.h, 28);
+    ctx.fillStyle = b.id === 'resume' ? 'rgba(124,240,90,.18)' : 'rgba(255,138,31,.16)'; ctx.fill();
+    ctx.lineWidth = 4; ctx.strokeStyle = b.id === 'resume' ? C.potion : C.pumpkin; ctx.stroke(); ctx.restore();
+    txt(b.label, b.x + b.w / 2, b.y + 46, { size: 40, color: C.bone, maxW: b.w - 30 });
+    txt(b.key, b.x + b.w / 2, b.y + 86, { size: 22, color: C.mist });
+  }
+  if (!IS_TOUCH && !document.hasFocus()) txt('Haz clic en el juego para que vuelva a escuchar las teclas', 800, 660, { size: 28, color: C.mist });
+}
+function drawRotate(t) {
+  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = 'rgba(11,7,22,.96)'; ctx.fillRect(0, 0, cv.width, cv.height);
+  const s = Math.min(viewW / 420, viewH / 640) * dpr;
+  ctx.setTransform(s, 0, 0, s, cv.width / 2, cv.height / 2);
+  const a = -Math.PI / 2 * Math.min(1, Math.max(0, Math.sin(t * 1.6) * 1.3 + 0.3));
+  ctx.save(); ctx.rotate(a); rr(-70, -120, 140, 240, 22); ctx.lineWidth = 8; ctx.strokeStyle = C.pumpkin; ctx.stroke();
+  ctx.fillStyle = C.pumpkin; ctx.beginPath(); ctx.arc(0, 98, 8, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+  txt('Gira el dispositivo', 0, 190, { size: 40, color: C.bone });
+  txt('El juego se ve en horizontal', 0, 236, { size: 26, color: C.mist });
+  ctx.restore();
 }
 
 /* ================================================================ bucle */
@@ -1325,13 +1411,18 @@ function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
   const t = (now - T0) / 1000;
   update(dt, t);
+  if (isPortrait() && G.state === 'play' && G.phase !== 'countdown' && G.phase !== 'victory') G.paused = true;
+  const bp = document.getElementById('btnPause'), showPause = G.state === 'play';
+  if (bp.hidden === showPause) bp.hidden = !showPause;
+  placeControls(false);
   if (!G.paused) updateEffects(dt);
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.fillStyle = '#0b0716'; ctx.fillRect(0, 0, cv.width, cv.height);
-  const sx = shake > 0.5 && !reduceMotion ? rand(-shake, shake) : 0, sy = shake > 0.5 && !reduceMotion ? rand(-shake, shake) : 0;
-  ctx.setTransform(scale * dpr, 0, 0, scale * dpr, (offX + sx * scale) * dpr, (offY + sy * scale) * dpr);
-  ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.clip();
+  shX = shake > 0.5 && !reduceMotion ? rand(-shake, shake) : 0; shY = shake > 0.5 && !reduceMotion ? rand(-shake, shake) : 0;
+  ctx.save();
+  setCoverTransform();
   drawBackground(t, G.paused ? 0 : dt);
+  setGameTransform();
   if (G.state === 'title') drawTitle(t);
   else if (G.state === 'subject') drawSubject(t);
   else if (G.state === 'diff') drawDiff(t);
@@ -1340,8 +1431,9 @@ function frame(now) {
   else if (G.state === 'play') drawPlay(t);
   else if (G.state === 'result') drawResult(t);
   drawEffects();
-  if (flash > 0) { ctx.fillStyle = `rgba(${flashColor},${Math.min(0.85, flash) * (reduceMotion ? 0.3 : 1)})`; ctx.fillRect(0, 0, W, H); }
-  if (G.paused) drawPause();
+  if (flash > 0) { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = `rgba(${flashColor},${Math.min(0.85, flash) * (reduceMotion ? 0.3 : 1)})`; ctx.fillRect(0, 0, cv.width, cv.height); ctx.restore(); }
+  if (G.paused) drawPause(t);
+  if (isPortrait()) drawRotate(t);
   ctx.restore();
   requestAnimationFrame(frame);
 }
