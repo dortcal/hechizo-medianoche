@@ -1,5 +1,7 @@
 # Hechizo a Medianoche
 
+[![Licencia CC BY-NC-ND 4.0](cc-by-nc-nd.svg)](https://creativecommons.org/licenses/by-nc-nd/4.0/deed.es)
+
 Juego de Halloween para el aula, pensado para jugar con **Makey Makey**, teclado o pantalla táctil.
 
 **Jugar:** https://dortcal.github.io/hechizo-medianoche/
@@ -29,6 +31,12 @@ Retos: tablas de multiplicar, sumas y restas, patrones y secuencias, ortografía
 - En Android y en iPad entra en pantalla completa al primer toque.
 - En iPhone, Safari no permite la pantalla completa en páginas web: usa **Compartir → Añadir a pantalla de inicio** y ábrelo desde el icono para jugar sin barras del navegador.
 - El botón de pausa (arriba a la derecha) permite seguir o salir al menú tocando la pantalla.
+
+## Licencia
+
+Hechizo a Medianoche © 2026 David OZC. Esta obra está bajo una licencia [Creative Commons Reconocimiento-NoComercial-SinObraDerivada 4.0 Internacional (CC BY-NC-ND 4.0)](https://creativecommons.org/licenses/by-nc-nd/4.0/deed.es): puedes usarla y compartirla gratis citando la autoría, sin fines comerciales y sin distribuir versiones modificadas.
+
+**Uso gratuito en centros educativos.** Detalles y créditos de terceros en [LICENSE.md](LICENSE.md).
 
 ---
 
